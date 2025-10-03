@@ -1,10 +1,15 @@
-Stylus Hello World Template
-This repository provides a beginner-friendly starter kit for developing Arbitrum Stylus smart contracts in Rust using the stylus-sdk. It features a Rust implementation of a simple counter contract, mirroring the following Solidity example:
+# README.md
+
+# Stylus Hello World Template
+
+This repository serves as a beginner-friendly starter kit for developing Arbitrum Stylus smart contracts in Rust, powered by the stylus-sdk. It features a simple Rust-based implementation of a counter contract that mirrors this Solidity counterpart:
+
+```solidity
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
 contract Counter {
-uint256 public number;
+    uint256 public number;
 
     function setNumber(uint256 newNumber) public {
         number = newNumber;
@@ -13,185 +18,245 @@ uint256 public number;
     function increment() public {
         number++;
     }
-
 }
+```
 
-For a minimal setup with the Stylus SDK, run:
-cargo stylus new --minimal <YOUR_PROJECT_NAME>
+This template is configured to easily generate the necessary Solidity ABI for interacting with your Rust contract.
 
-Getting Started
-Prerequisites
-Ensure you have the following installed:
+## Getting Started
 
-Rust toolchain (version 1.80 or later recommended)
-VS Code (recommended for development)
-Docker (required for running the Nitro devnode)
-Foundry's Cast (for interacting with contracts)
-Nitro devnode (for local testing)
+### Prerequisites
 
-Installing cargo-stylus
-Install the Stylus CLI toolkit:
-cargo install --force cargo-stylus cargo-stylus-check
+- Rust toolchain
+- VS Code
+- Docker
+- Foundry's cast
+- Nitro devnode
 
-Add WebAssembly as a build target:
+### Installation
+
+1. Install the Stylus CLI:
+
+```bash
+cargo install --force cargo-stylus
+```
+
+2. Enable WebAssembly compilation:
+
+```bash
 rustup default 1.80
 rustup target add wasm32-unknown-unknown --toolchain 1.80
+```
 
-Verify installation:
+3. Verify installation:
+
+```bash
 cargo stylus --help
+```
 
-Cloning the Template
-Clone the repository and navigate to the project directory:
+4. Clone this repository:
+
+```bash
 git clone https://github.com/OffchainLabs/stylus-hello-world && cd stylus-hello-world
+```
 
-Setting Up a Nitro Devnode
-To run a local Arbitrum node for testing, set up a Nitro devnode:
+## Testnet Details
 
-Ensure Docker is running.
-Run the Nitro devnode:
+Find all necessary testnet resources—faucets, RPC URLs, etc.—[here](https://docs.arbitrum.io/stylus/reference/testnet-information).
 
-docker run --rm -it -p 8547:8547 -p 8548:8548 offchainlabs/nitro-node-dev:latest --init
+## Contract Validation
 
-This starts a local Arbitrum node with an RPC endpoint at http://localhost:8547. The devnode includes a pre-funded account with the private key:
-0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659
+Before deploying, validate your contract can be deployed and activated onchain:
 
-Corresponding address: 0x3f1Eae7D46d88F08fc2F8ed27FCb2AB183EB2d0e.
-For more details, refer to the Arbitrum Docs on running a local dev node.
-Generating ABI
-Generate a Solidity ABI for your Rust contract:
-cargo stylus export-abi
-
-Example output:
-// SPDX-License-Identifier: MIT-OR-APACHE-2.0
-pragma solidity ^0.8.23;
-
-interface ICounter {
-function number() external view returns (uint256);
-function setNumber(uint256 new_number) external;
-function mulNumber(uint256 new_number) external;
-function addNumber(uint256 new_number) external;
-function increment() external;
-}
-
-The export-abi feature is enabled in Cargo.toml:
-[features]
-export-abi = ["stylus-sdk/export-abi"]
-
-Checking Contract Validity
-Verify that your contract compiles to valid WASM and is deployable:
+```bash
 cargo stylus check
+```
 
-Note: Ensure the Nitro devnode (Docker) is running.
-Success output:
+Docker must be running for this command.
+
+Example successful output:
+
+```
 Finished release [optimized] target(s) in 1.88s
 Reading WASM file at stylus-hello-world/target/wasm32-unknown-unknown/release/stylus-hello-world.wasm
 Compressed WASM size: 8.9 KB
 Program succeeded Stylus onchain activation checks with Stylus version: 1
+```
 
-If the check fails, consult the Invalid Stylus WASM Contracts explainer.
-Deploying the Contract
-Estimating Gas
-Estimate gas for deployment and activation using the pre-funded private key:
+## Contract Deployment
+
+### 1. Estimate Gas (without transaction)
+
+```bash
 cargo stylus deploy \
- --endpoint='http://localhost:8547' \
- --private-key="0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659" \
- --estimate-gas
+  --private-key-path=<PRIVKEY_FILE_PATH> \
+  --estimate-gas
+```
 
 Example output:
-deployment tx gas: 7123737
-gas price: "0.100000000" gwei
-deployment tx total cost: "0.000712373700000000" ETH
 
-Full Deployment
-Deploy and activate the contract on the local Nitro devnode:
+```
+Estimated gas for deployment: 1874876
+```
+
+### 2. Deploy Contract
+
+```bash
 cargo stylus deploy \
- --endpoint='http://localhost:8547' \
- --private-key="0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659"
+  --private-key-path=<PRIVKEY_FILE_PATH>
+```
+
+Successful output:
+
+```
+Compressed WASM size: 8.9 KB
+Deploying program to address 0x457b1ba688e9854bdbed2f473f7510c476a3da09
+Estimated gas: 1973450
+Submitting tx...
+Confirmed tx 0x42db…7311, gas used 1973450
+Activating program at address 0x457b1ba688e9854bdbed2f473f7510c476a3da09
+Estimated gas: 14044638
+Submitting tx...
+Confirmed tx 0x0bdb…3307, gas used 14044638
+```
+
+Your contract is now deployed and activated!
+
+## ABI Generation
+
+Generate the Solidity ABI for your contract:
+
+```bash
+cargo stylus export-abi
+```
+
+This will output:
+
+```solidity
+/**
+ * This file was automatically generated by Stylus and represents a Rust program.
+ * For more information, please see [The Stylus SDK](https://github.com/OffchainLabs/stylus-sdk-rs).
+ */
+
+// SPDX-License-Identifier: MIT-OR-APACHE-2.0
+pragma solidity ^0.8.23;
+
+interface ICounter {
+    function number() external view returns (uint256);
+
+    function setNumber(uint256 new_number) external;
+
+    function mulNumber(uint256 new_number) external;
+
+    function addNumber(uint256 new_number) external;
+
+    function increment() external;
+}
+```
+
+## Interacting with the Contract
+
+### Rust Interaction Example
+
+See `examples/counter.rs` for a complete example using ethers-rs:
+
+```rust
+abigen!(
+    Counter,
+    r#"[
+        function number() external view returns (uint256)
+        function setNumber(uint256 number) external
+        function increment() external
+    ]"#
+);
+
+// Configure environment with:
+// RPC_URL, STYLUS_CONTRACT_ADDRESS, PRIV_KEY_PATH
+// in a .env file or environment variables
+
+let provider = alchemy_provider(&rpc_url).await?;
+let client = LocalWallet::from_str(&priv_key, &provider.clone())?;
+let counter = Counter::new(counter_address, &provider.into());
+
+// Read current value
+let current_value = counter.number().call().await?;
+println!("Current counter value: {:?}", current_value);
+
+// Update counter value
+let _ = counter.increment().send().await?.await?;
+let new_value = counter.number().call().await?;
+println!("New counter value: {:?}", new_value);
+```
+
+Run with:
+
+```bash
+cargo run --example counter
+```
+
+### Foundry's Cast
+
+#### Calling a Function
+
+```bash
+cast call \
+  --rpc-url <RPC_URL> \
+  --private-key <PRIVATE_KEY> \
+  [contract-address] "number()(uint256)"
+```
 
 Example output:
-deployed code at address: 0x33f54de59419570a9442e788f5dd5cf635b3c7ac
-deployment tx hash: 0xa55efc05c45efc63647dff5cc37ad328a47ba5555009d92ad4e297bf4864de36
-wasm already activated!
 
-Save the deployment address for future interactions.
-Interacting with the Contract
-Stylus contracts are EVM-compatible and can be interacted with using tools like Foundry's Cast or ethers-rs.
-Calling the Contract
-Check the counter's current value:
-cast call --rpc-url 'http://localhost:8547' \
- --private-key 0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659 \
- [deployed-contract-address] "number()(uint256)"
+```
+0
+```
 
-Example output: 0 (initial counter value).
-Sending a Transaction
-Increment the counter:
-cast send --rpc-url 'http://localhost:8547' \
- --private-key 0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659 \
- [deployed-contract-address] "increment()"
+#### Sending a Transaction
 
-Example output:
-blockHash 0xfaa2cce3b9995f3f2e2a2f192dc50829784da9ca4b7a1ad21665a25b3b161f7c
-blockNumber 20
-contractAddress
-cumulativeGasUsed 97334
-effectiveGasPrice 100000000
-from 0x3f1Eae7D46d88F08fc2F8ed27FCb2AB183EB2d0e
-gasUsed 97334
-logs []
-logsBloom 0x000...
-status 1 (success)
-transactionHash 0x28c6ba8a0b9915ed3acc449cf6c645ecc406a4b19278ec1eb67f5a7091d18f6b
-transactionIndex 1
-type 2
+```bash
+cast send \
+  --rpc-url <RPC_URL> \
+  --private-key <PRIVATE_KEY> \
+  [contract-address] "increment()"
+```
 
-Verify the increment by calling number()(uint256) again.
-Testing the Contract
-Use the Stylus testing framework with TestVM to simulate the Stylus execution environment locally without deployment. Example test in tests/counter.rs: #[cfg(test)]
+After incrementing, you can call the number() function again to see the updated value.
+
+## Testing
+
+The template includes a test file (`tests/test_counter.rs`) that demonstrates how to test your Stylus contract:
+
+```rust
+#[cfg(test)]
 mod test {
-use super::_;
-use alloy_primitives::address;
-use stylus_sdk::testing::_;
+    use super::*;
+    use alloy_primitives::address;
+    use stylus_sdk::testing::*;
 
     #[test]
     fn test_counter_operations() {
         let vm = TestVM::default();
         let mut contract = Counter::from(&vm);
 
-        // Test initial state
         assert_eq!(contract.number().unwrap(), U256::ZERO);
 
-        // Test increment
         contract.increment().unwrap();
         assert_eq!(contract.number().unwrap(), U256::from(1));
 
-        // Test set number
         contract.set_number(U256::from(5)).unwrap();
         assert_eq!(contract.number().unwrap(), U256::from(5));
     }
-
 }
+```
 
-Add the following to Cargo.toml to enable testing:
-[dev-dependencies]
-stylus-sdk = { version = "0.8.4", features = ["stylus-test"] }
+Run tests with:
 
-Run tests:
+```bash
 cargo test
+```
 
-The testing framework supports:
+## Customization Options
 
-Simulating transaction context and block information
-Testing contract storage operations
-Verifying state transitions
-Mocking contract-to-contract interactions
-Testing scenarios without deployment costs
-
-For advanced testing, see the Testing contracts with Stylus guide.
-Customization Options
-cargo stylus applies default WASM optimizations. For advanced control, see the cargo stylus README. To minimize WASM size, refer to optimization tips.
-Exploring the Internals
-The stylus-sdk simplifies Solidity transitions by expanding macros to plain Rust for WASM compilation. View expanded code with:
-cargo install cargo-expand
-cargo expand --all-features --release --target=<YOUR_ARCHITECTURE>
-
-Find <YOUR_ARCHITECTURE> with rustc -vV | grep host (e.g., aarch64-apple-darwin for M1 Macs, x86_64-unknown-linux-gnu for x86 Linux).
+- Add dependencies in `Cargo.toml` for advanced features
+- Use `cargo stylus new --minimal` for a leaner setup
+- For advanced wasm optimization, consult [cargo-stylus documentation](https://github.com/OffchainLabs/cargo-stylus)
