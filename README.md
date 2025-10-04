@@ -266,21 +266,24 @@ cast call <CONTRACT_ADDRESS> "ownerOf(uint256)" 1 \
 # 📘 Glossary
 
 **ABI (Application Binary Interface):** Defines how data and functions are encoded/decoded for smart contracts.
+
 **Address:** A unique identifier for accounts and contracts on Ethereum/Arbitrum.
+
 **Arbitrum Nitro:** The underlying rollup tech powering Arbitrum, enabling fast and cheap L2 transactions.
+
 **Cargo:** Rust’s package manager and build system.
+
 **Cast:** A CLI tool from Foundry used to interact with Ethereum contracts and send transactions.
+
 **EVM (Ethereum Virtual Machine):** The runtime environment for executing Solidity contracts.
+
 **Gas:** A unit measuring computational effort required to execute operations on Ethereum/Arbitrum.
+
 **RPC (Remote Procedure Call):** A way to communicate with blockchain nodes via HTTP/WebSocket endpoints.
+
 **Stylus SDK:** The official Rust SDK for writing and deploying Stylus contracts.
+
 **WASM (WebAssembly):** A portable low-level binary format that allows code written in languages like Rust or C++ to run efficiently in multiple environments.
-
----
-
-## License
-
-Dual-licensed under [Apache 2.0](./LICENSE) or [MIT](./LICENSE).
 
 ---
 
