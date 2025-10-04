@@ -71,6 +71,36 @@ git clone https://github.com/OffchainLabs/stylus-hello-world && cd stylus-hello-
 
 Find all necessary testnet resources—faucets, RPC URLs, etc.—[here](https://docs.arbitrum.io/stylus/reference/testnet-information).
 
+## Local Development Environment
+
+Before deploying to testnet, you'll want to test your contract locally using the Arbitrum Nitro devnode.
+
+**Launch Local Devnode:**
+
+```bash
+git clone https://github.com/OffchainLabs/nitro-devnode.git
+cd nitro-devnode
+./run-dev-node.sh
+```
+
+This starts a local Arbitrum chain at `http://localhost:8547` with a pre-funded wallet: `0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659`.
+
+**Verify the devnode is running:**
+
+```bash
+cast block-number --rpc-url http://localhost:8547
+```
+
+Should return `0` or higher, confirming the local chain is active.
+
+**Stop the devnode when done:**
+
+```bash
+docker compose down
+```
+
+Use this local environment to deploy and test your counter contract before moving to testnet.
+
 ## Contract Validation
 
 Before deploying, validate your contract can be deployed and activated onchain:
