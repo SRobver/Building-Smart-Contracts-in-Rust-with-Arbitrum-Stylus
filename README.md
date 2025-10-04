@@ -1,469 +1,288 @@
 # Building Smart Contracts in Rust with Arbitrum Stylus
 
-## Introduction
+This repository contains multiple **Rust smart contract examples** for [Arbitrum Stylus](https://docs.arbitrum.io/stylus) — Arbitrum’s next-gen environment for running WebAssembly (WASM) contracts alongside Solidity contracts.
 
-This repository provides a comprehensive guide to building secure, efficient smart contracts on the Ethereum Virtual Machine (EVM) using Rust and Arbitrum Stylus. Stylus is Arbitrum's innovative layer-2 scaling solution that enables developers to write smart contracts in languages beyond Solidity, leveraging WebAssembly (WASM) for enhanced performance and safety.
-
-In this tutorial, we'll build a demo ERC-721 (NFT) token contract - a non-fungible token standard that allows for unique digital assets on the blockchain. ERC-721 tokens are widely used for digital collectibles, gaming items, real estate deeds, and more. We're using Rust with Stylus because it provides compile-time safety guarantees, zero-cost abstractions, and significantly lower gas costs compared to traditional Solidity contracts (typically 20-50% cheaper). The tutorial demonstrates professional development practices with modular architecture, comprehensive testing, and deployment to a local Arbitrum devnet.
-
-**What You'll Achieve:**
-
-- A production-ready ERC-721 NFT smart contract implementation in Rust
-- Type-safe development with strong memory and ownership guarantees
-- Gas-efficient WebAssembly contracts compiled from Rust code
-- Hands-on Stylus SDK usage with EVM compatibility
-- Local development environment setup and deployment
-- Comprehensive testing and interaction examples
-
-By the end of this guide, you'll have a fully functional NFT contract deployed to a local Arbitrum chain, with the knowledge to extend it for real-world applications.
+With Stylus, developers can write contracts in **Rust, C/C++, Go, and other WASM-compatible languages**, while still enjoying full interoperability with the Ethereum ecosystem.
 
 ---
 
-## 🛠️ Prerequisites and Setup
+## Why Stylus + Rust?
 
-Ensure your environment is ready for Rust smart contract development. You'll need tools for coding, testing, and running a local Arbitrum chain.
-
-### Required Tools
-
-| Tool                   | Purpose                                         | Installation                                                                                                                             |
-| ---------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Rust Toolchain**     | Stable (1.81+ recommended) for WASM compilation | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh`<br>Verify: `rustup --version`, `rustc --version`, `cargo --version`    |
-| **Docker**             | Runs the Nitro devnode (local Arbitrum chain)   | Install from [docker.com](https://www.docker.com). Ensure Docker Desktop is running.                                                     |
-| **Foundry (Cast CLI)** | Interacts with contracts (e.g., call, send)     | `curl -L https://foundry.paradigm.xyz \| bash` then `foundryup`                                                                          |
-| **VS Code** (optional) | IDE with Rust extensions                        | Install extensions: `rust-analyzer` (autocompletion, diagnostics), `Error Lens` (inline errors), `Even Better TOML` (Cargo.toml editing) |
-
-**Tip**: On Windows, use WSL2 for smoother Rust/Docker compatibility. Keep Rust updated with `rustup update stable`.
+* 🚀 **Performance**: Rust → WASM contracts are faster and ~20–50% cheaper than Solidity.
+* 🔒 **Safety**: Rust’s strict memory and ownership model reduces common bugs.
+* 🔗 **Interoperability**: Stylus contracts can call and be called by Solidity contracts seamlessly.
+* 🛠 **Tooling**: Leverage Rust’s ecosystem (Cargo, Clippy, rust-analyzer).
 
 ---
 
-## 🚀 Step 1: Launch the Arbitrum Devnode
+## Repo Structure
 
-Stylus contracts run on Arbitrum, so we'll use the Nitro devnode to simulate a local chain with a pre-funded wallet.
+This repo demonstrates **two contracts**, each in its own folder with a dedicated README:
 
-1. Clone and start the devnode:
-   ```bash
-   git clone https://github.com/OffchainLabs/nitro-devnode.git
-   cd nitro-devnode
-   ./run-dev-node.sh
-   ```
+* [`counter/`](./counter) → A simple **Counter contract** in Rust (hello world of smart contracts).
+* [`nft-dapp/`](./nft-dapp) → A full **ERC-721 NFT contract** in Rust with minting, transfers, and approvals.
 
-This launches an Arbitrum chain at http://localhost:8547 (RPC endpoint) and provides a pre-funded wallet: `0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659`.
+Each section below includes full setup, development, deployment, and interaction instructions.
 
-Wait for "Node is ready" in logs. Stop with `docker compose down`.
+---
 
-**Verify the node:**
+# Stylus Quickstart (Rust Counter Example)
+
+This guide helps you get started with **Arbitrum Stylus** by writing, deploying, and interacting with a simple **Counter** smart contract in Rust.
+
+---
+
+## 1. What is Stylus?
+
+Stylus is Arbitrum’s WASM-based execution environment.
+It allows you to write smart contracts in **Rust, C, C++, and more**, while maintaining full interoperability with Solidity contracts.
+
+**Benefits:**
+
+* Write contracts in familiar languages.
+* Up to **20–50% lower gas fees**.
+* Seamless calls between WASM and EVM contracts.
+* Safe execution with Rust’s memory guarantees.
+
+---
+
+## 2. Prerequisites
+
+Make sure you have the following installed:
+
+* [Rust](https://www.rust-lang.org/tools/install) (>=1.80)
+* Cargo Stylus CLI
+
+  ```bash
+  cargo install --force cargo-stylus
+  rustup target add wasm32-unknown-unknown
+  ```
+* [Docker](https://docs.docker.com/get-docker/) (for Nitro devnode)
+* [Foundry](https://book.getfoundry.sh/getting-started/installation) (for `cast` commands)
+* VS Code + `rust-analyzer` (recommended)
+
+---
+
+## 3. Run a Local Stylus Node
+
+Clone and start a local Nitro devnode:
+
+```bash
+git clone https://github.com/OffchainLabs/nitro-devnode.git
+cd nitro-devnode
+./run-dev-node.sh
+```
+
+RPC will be available at:
+
+```
+http://localhost:8547
+```
+
+Check the node:
 
 ```bash
 cast block-number --rpc-url http://localhost:8547
 ```
 
-Should return 0 or higher, confirming the chain is live.
+---
 
-## 🔧 Step 2: Install Cargo Stylus CLI
-
-The Cargo Stylus CLI compiles Rust to WASM, validates contracts, and handles deployment to Arbitrum.
-
-**Install:**
+## 4. Create a New Stylus Project
 
 ```bash
-cargo install --force cargo-stylus
+cargo stylus new hello-counter
+cd hello-counter
 ```
 
-**Configure Rust for WASM:**
+This generates a Rust project with a sample `Counter` contract.
+
+---
+
+## 5. Check Contract Validity
+
+Make sure your contract compiles and is Stylus-compatible:
 
 ```bash
-rustup default stable
-rustup target add wasm32-unknown-unknown
+cargo stylus check --endpoint http://localhost:8547
 ```
 
-**Verify:**
+---
+
+## 6. Deploy Contract
+
+Deploy using your private key:
 
 ```bash
-cargo stylus --help
+cargo stylus deploy \
+  --endpoint http://localhost:8547 \
+  --private-key <YOUR_PRIVATE_KEY>
 ```
 
-Lists commands: new, check, deploy, estimate-gas, etc.
+After deployment, you’ll get the **contract address**.
 
-**Note**: If toolchain issues arise, run `rustup override set stable` in your project directory.
+---
 
-## 📦 Step 3: Scaffold a Stylus Project
+## 7. Interact with the Contract
 
-Create a new project to house our DemoNFT ERC-721 contract.
+Check the stored number:
 
-**Generate the project:**
+```bash
+cast call <CONTRACT_ADDRESS> "number()" --rpc-url http://localhost:8547
+```
+
+Update the number:
+
+```bash
+cast send <CONTRACT_ADDRESS> "set_number(uint256)" 42 \
+  --private-key <YOUR_PRIVATE_KEY> \
+  --rpc-url http://localhost:8547
+```
+
+---
+
+## 8. Next Steps
+
+* Explore the [ERC-721 NFT Example](#erc-721-nft-example-in-rust-with-stylus) for advanced usage.
+* Write and run tests with `cargo test`.
+* Deploy to Arbitrum Sepolia or Arbitrum One.
+
+---
+
+# ERC-721 NFT Example in Rust with Stylus
+
+This guide walks you through writing and deploying an **ERC-721 NFT smart contract in Rust** using Arbitrum Stylus.
+
+---
+
+## 1. Why Rust for NFTs?
+
+* Memory safety and performance of Rust.
+* Same contract logic as Solidity, but with **20–50% cheaper execution**.
+* Seamless integration with Solidity contracts (can call each other).
+
+---
+
+## 2. Project Setup
 
 ```bash
 cargo stylus new demo-nft
 cd demo-nft
 ```
 
-**Structure:**
-
-```
-demo-nft/
-├── Cargo.toml          # Dependencies and config
-├── rust-toolchain.toml # Pins Rust version
-├── src/
-│   ├── lib.rs          # Contract entrypoint
-│   └── main.rs         # Off-chain testing (optional)
-├── examples/           # Sample contracts (delete if unused)
-└── README.md
-```
-
-**Update Cargo.toml:**
+Edit `Cargo.toml` to include:
 
 ```toml
-[package]
-name = "demo-nft"
-version = "0.1.0"
-edition = "2021"
-
 [dependencies]
-stylus-sdk = "0.4"
-alloy-primitives = "0.7"
-alloc = { version = "0.0.0", optional = true }
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-export-abi = ["stylus-sdk/export-abi"]
+stylus-sdk = "0.6"
+alloy-primitives = "0.2"
 ```
 
-**Tip**: Remove `examples/counter.rs` to focus on ERC-721. Run `cargo check` for initial validation.
+---
 
-## 🧩 Step 4: Implement the ERC-721 NFT Contract
+## 3. Contract Structure
 
-We'll build a complete, production-ready ERC-721 NFT contract implementation in Rust. This section covers the step-by-step development process, from basic structure to advanced features. Our approach uses modular design with separation of concerns for maintainability and reusability.
-
-The ERC-721 standard defines the interface for non-fungible tokens on Ethereum. Each token is unique and indivisible, perfect for representing digital collectibles, artwork, or any asset that requires uniqueness verification. We'll implement core methods like minting, transferring, and approving tokens, while leveraging Rust's type safety to prevent common blockchain vulnerabilities.
-
-**Architecture Overview:**
-
-- `erc721.rs`: Generic ERC-721 logic (ownership tracking, transfers, approvals) - reusable across different NFT contracts
-- `lib.rs`: DemoNFT-specific configuration and entrypoint - contract customization
-- Separation of business logic from contract specifics for better code organization
-
-### 🔹 src/erc721.rs: Generic ERC-721 Engine
-
-Create `src/erc721.rs` for reusable NFT logic. Add `mod erc721;` to `src/lib.rs`.
-
-**Imports:**
+Example `lib.rs`:
 
 ```rust
+#![no_std]
+
 extern crate alloc;
-use alloc::string::String;
-use alloy_primitives::{Address, U256};
-use alloy_sol_types::sol;
-use core::marker::PhantomData;
-use stylus_sdk::{msg, prelude::*, stylus_core::log};
-```
 
-**Token Configuration Trait:**
+use stylus_sdk::{
+    prelude::*,
+    abi::ethereum::erc721::{ERC721, ERC721Data, ERC721Error},
+};
 
-```rust
-pub trait Erc721Params {
-    const NAME: &'static str;
-    const SYMBOL: &'static str;
-}
-```
-
-**Storage Layout:**
-
-```rust
-sol_storage! {
-    pub struct Erc721<T> {
-        mapping(uint256 => address) owner_of;
-        mapping(address => uint256) balance_of;
-        mapping(uint256 => address) token_approvals;
-        PhantomData<T> phantom;
-    }
-}
-```
-
-**Events and Errors:**
-
-```rust
-sol! {
-    event Transfer(address indexed from, address indexed to, uint256 indexed token_id);
-    error NotOwner(address caller, uint256 token_id);
-    error AlreadyMinted(uint256 token_id);
-    error NotApproved(address caller, uint256 token_id);
-}
-```
-
-**Internal Logic:**
-
-```rust
-impl<T: Erc721Params> Erc721<T> {
-    pub fn mint(&mut self, to: Address, token_id: U256) -> Result<(), Erc721Error> {
-        if self.owner_of.get(token_id) != Address::zero() {
-            return Err(Erc721Error::AlreadyMinted(token_id));
-        }
-        self.owner_of.set(token_id, to);
-        self.balance_of.set(to, self.balance_of.get(to) + U256::from(1));
-        Transfer(Address::zero(), to, token_id).emit();
-        Ok(())
-    }
-
-    pub fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) -> Result<(), Erc721Error> {
-        let owner = self.owner_of.get(token_id);
-        if owner != from || owner == Address::zero() {
-            return Err(Erc721Error::NotOwner(from, token_id));
-        }
-        let caller = msg::sender();
-        if caller != owner && self.token_approvals.get(token_id) != caller {
-            return Err(Erc721Error::NotApproved(caller, token_id));
-        }
-        self.token_approvals.set(token_id, Address::zero());
-        self.owner_of.set(token_id, to);
-        self.balance_of.set(from, self.balance_of.get(from) - U256::from(1));
-        self.balance_of.set(to, self.balance_of.get(to) + U256::from(1));
-        Transfer(from, to, token_id).emit();
-        Ok(())
-    }
-
-    pub fn approve(&mut self, spender: Address, token_id: U256) -> Result<(), Erc721Error> {
-        let owner = self.owner_of.get(token_id);
-        if owner != msg::sender() || owner == Address::zero() {
-            return Err(Erc721Error::NotOwner(msg::sender(), token_id));
-        }
-        self.token_approvals.set(token_id, spender);
-        Ok(())
-    }
-}
-```
-
-**Public ERC-721 Interface:**
-
-```rust
-#[public]
-impl<T: Erc721Params> Erc721<T> {
-    pub fn name() -> String { T::NAME.to_string() }
-    pub fn symbol() -> String { T::SYMBOL.to_string() }
-    pub fn owner_of(&self, token_id: U256) -> Address { self.owner_of.get(token_id) }
-    pub fn balance_of(&self, owner: Address) -> U256 { self.balance_of.get(owner) }
-}
-```
-
-### 🔸 src/lib.rs: DemoNFT Entrypoint
-
-**Implementation Steps:**
-
-1. **Import required modules:** Bring in ERC-721 traits, error types, and Stylus primitives.
-2. **Define contract parameters:** Configure the NFT's name and symbol.
-3. **Create contract struct:** Use Stylus storage macros to define contract state.
-4. **Implement public methods:** Expose mint, transfer, and approval functionality.
-5. **Add security considerations:** Include ownership checks and access control in production.
-
-**Code:**
-
-```rust
-extern crate alloc;
-mod erc721;
-use alloy_primitives::{Address, U256};
-use stylus_sdk::prelude::*;
-use crate::erc721::{Erc721, Erc721Params, Erc721Error};
-
-// Contract configuration
-struct DemoNFTParams;
-impl Erc721Params for DemoNFTParams {
-    const NAME: &'static str = "DemoNFT";
-    const SYMBOL: &'static str = "DNFT";
+#[storage]
+pub struct DemoNFT {
+    #[borrow]
+    data: ERC721Data,
 }
 
-// Entrypoint definition
-sol_storage! {
-    #[entrypoint]
-    struct DemoNFT {
-        #[borrow]
-        Erc721<DemoNFTParams> erc721;
-    }
-}
-
-// Public interface implementation
-#[public]
-#[inherit(Erc721<DemoNFTParams>)]
+#[external]
 impl DemoNFT {
-    /// Mint a new NFT to specified address
-    pub fn mint(&mut self, to: Address, token_id: U256) -> Result<(), Erc721Error> {
-        self.erc721.mint(to, token_id)
+    pub fn init(&mut self, name: String, symbol: String) {
+        self.data.init(name, symbol);
     }
 
-    /// Transfer NFT ownership (requires approval if not owner)
-    pub fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) -> Result<(), Erc721Error> {
-        self.erc721.transfer_from(from, to, token_id)
+    pub fn mint(&mut self, to: Address, token_id: U256) -> Result<(), ERC721Error> {
+        self.data.mint(to, token_id)
     }
 
-    /// Approve another address to transfer this NFT
-    pub fn approve(&mut self, spender: Address, token_id: U256) -> Result<(), Erc721Error> {
-        self.erc721.approve(spender, token_id)
+    pub fn burn(&mut self, token_id: U256) -> Result<(), ERC721Error> {
+        self.data.burn(token_id)
     }
 }
 ```
 
-**Security Considerations:**
+---
 
-- Only contract owner should be able to mint tokens
-- Implement access control (e.g., Ownable pattern)
-- Add input validation for addresses and token IDs
-- Use safe transfer patterns in production deployments
-
-## 🧪 Step 5: Build, Validate, and Deploy
-
-Compile and deploy the contract to the local devnet.
-
-**Build:**
-
-```bash
-cargo stylus build
-```
-
-Produces WASM in `target/stylus/`. Use `cargo clippy` for linting.
-
-**Validate:**
+## 4. Compile & Check
 
 ```bash
 cargo stylus check --endpoint http://localhost:8547
 ```
 
-Ensures contract compatibility with Stylus.
+---
 
-**Estimate Gas:**
-
-```bash
-cargo stylus deploy --endpoint http://localhost:8547 \
- --private-key 0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659 \
- --estimate-gas
-```
-
-Example output:
-
-```
-deployment tx gas: 7500000
-gas price: "0.100000000" gwei
-deployment tx total cost: "0.000750000000000000" ETH
-```
-
-**Deploy:**
+## 5. Deploy the NFT Contract
 
 ```bash
-cargo stylus deploy --endpoint http://localhost:8547 \
- --private-key 0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659
+cargo stylus deploy \
+  --endpoint http://localhost:8547 \
+  --private-key <YOUR_PRIVATE_KEY>
 ```
 
-Example output:
+---
 
-```
-deployed code at address: 0x33f54de59419570a9442e788f5dd5cf635b3c7ac
-deployment tx hash: 0xa55efc05c45efc63647dff5cc37ad328a47ba5555009d92ad4e297bf4864de36
-wasm already activated!
-```
+## 6. Interact with the NFT
 
-**Interact:** Mint an NFT with token ID 1:
+Mint an NFT:
 
 ```bash
-cast send <address> "mint(address,uint256)" <your_address> 1 --private-key <key> --rpc-url http://localhost:8547
+cast send <CONTRACT_ADDRESS> "mint(address,uint256)" \
+  0xYourWalletAddress 1 \
+  --private-key <YOUR_PRIVATE_KEY> \
+  --rpc-url http://localhost:8547
 ```
 
-**Debugging:** If deployment fails, check WASM size (<256KB) with `cargo stylus trace`.
-
-## 🤝 Interacting with the Contract
-
-Use `examples/nft.rs` to interact via ethers-rs:
-
-**Code:**
-
-```
-use ethers::prelude::\*;
-abigen!(
-DemoNFT,
-r#"[
-function name() external view returns (string memory)
-function symbol() external view returns (string memory)
-function ownerOf(uint256 tokenId) external view returns (address)
-function balanceOf(address owner) external view returns (uint256)
-function mint(address to, uint256 tokenId) external
-function transferFrom(address from, address to, uint256 tokenId) external
-function approve(address spender, uint256 tokenId) external
-]"#
-);
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-let provider = Provider::<Http>::try_from(std::env::var("RPC_URL")?)?;
-let client = Arc::new(SignerMiddleware::new(
-provider.clone(),
-Wallet::from_bytes(&hex::decode(std::fs::read_to_string(std::env::var("PRIV_KEY_PATH")?)?)?)?,
-));
-let address = std::env::var("STYLUS_CONTRACT_ADDRESS")?.parse::<Address>()?;
-let nft = DemoNFT::new(address, client.clone());
-
-    let name = nft.name().call().await?;
-    println!("NFT name: {}", name);
-    let balance = nft.balance_of(client.address()).call().await?;
-    println!("Balance of caller: {}", balance);
-
-    let token_id = U256::from(1);
-    let tx = nft.mint(client.address(), token_id).send().await?.await?;
-    println!("Minted token {}: {:?}", token_id, tx);
-
-    let owner = nft.owner_of(token_id).call().await?;
-    println!("Owner of token {}: {:?}", token_id, owner);
-
-    Ok(())
-
-```
-
-**Set up .env:**
+Check owner:
 
 ```bash
-RPC_URL=http://localhost:8547
-STYLUS_CONTRACT_ADDRESS=<deployed_contract_address>
-PRIV_KEY_PATH=<path_to_private_key_file>
+cast call <CONTRACT_ADDRESS> "ownerOf(uint256)" 1 \
+  --rpc-url http://localhost:8547
 ```
 
-**Run:**
+---
 
-```bash
-cargo run --example nft --target=<YOUR_ARCHITECTURE>
-```
+## 7. Next Steps
 
-Find `<YOUR_ARCHITECTURE>` with `rustc -vV | grep host`.
+* Add metadata extensions (`tokenURI`).
+* Deploy to **Arbitrum Sepolia** testnet.
+* Build marketplace or NFT game logic on top.
 
-## 🔗 Resources
+---
 
-| Resource             | Link/Description                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| Arbitrum Stylus Docs | [docs.arbitrum.io/stylus](https://docs.arbitrum.io/stylus)                                 |
-| Stylus Examples      | [github.com/OffchainLabs/stylus-examples](https://github.com/OffchainLabs/stylus-examples) |
-| Stylus SDK           | [crates.io/crates/stylus-sdk](https://crates.io/crates/stylus-sdk)                         |
-| Cargo Stylus CLI     | [github.com/OffchainLabs/stylus-cli](https://github.com/OffchainLabs/stylus-cli)           |
-| Alloy Primitives     | [docs.rs/alloy-primitives](https://docs.rs/alloy-primitives)                               |
-| Arbitrum Discord     | [discord.gg/arbitrum](https://discord.gg/arbitrum) (#stylus channel)                       |
+# 📘 Glossary
 
-🚀 Next Steps
+**ABI (Application Binary Interface):** Defines how data and functions are encoded/decoded for smart contracts.
+**Address:** A unique identifier for accounts and contracts on Ethereum/Arbitrum.
+**Arbitrum Nitro:** The underlying rollup tech powering Arbitrum, enabling fast and cheap L2 transactions.
+**Cargo:** Rust’s package manager and build system.
+**Cast:** A CLI tool from Foundry used to interact with Ethereum contracts and send transactions.
+**EVM (Ethereum Virtual Machine):** The runtime environment for executing Solidity contracts.
+**Gas:** A unit measuring computational effort required to execute operations on Ethereum/Arbitrum.
+**RPC (Remote Procedure Call):** A way to communicate with blockchain nodes via HTTP/WebSocket endpoints.
+**Stylus SDK:** The official Rust SDK for writing and deploying Stylus contracts.
+**WASM (WebAssembly):** A portable low-level binary format that allows code written in languages like Rust or C++ to run efficiently in multiple environments.
 
-Unit Tests: Add tests in tests/ with cargo test. Use Foundry for EVM simulations.
-Frontend: Build a dApp with ethers.js or wagmi (scaffold via create-eth-app).
-Enhancements:
-Access Control: Add only_owner for mint.
-Safe Transfers: Implement safeTransferFrom (ERC-721 standard).
-Metadata: Add tokenURI for NFT metadata (e.g., JSON with image links).
-Upgrades: Use proxies for upgradability.
+---
 
-Testnet Deployment: Target Arbitrum Sepolia with faucet ETH.
-Optimize: Profile gas with cargo stylus trace. Rust contracts are ~20-50% cheaper than Solidity.
+## License
 
-Why Stylus + Rust?
+Dual-licensed under [Apache 2.0](./LICENSE) or [MIT](./LICENSE).
 
-Performance: WASM is faster and cheaper than EVM.
-Safety: Rust's borrow checker prevents unauthorized transfers and logic errors.
-Tooling: Cargo, clippy, and rust-analyzer streamline development.
-Interoperability: Call Solidity contracts via Alloy.
+---
 
-Build, audit, and deploy with confidence—Stylus is ready for Arbitrum One! For issues, join the Arbitrum Discord.
+💡 Want to go further? Check the [Stylus docs](https://docs.arbitrum.io/stylus) and join the [Arbitrum Discord](https://discord.gg/arbitrum) (`#stylus` channel).
 
-```
-
-```
