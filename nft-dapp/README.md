@@ -1,8 +1,35 @@
-# Stylus NFT Template
+# DemoNFT Contract with Arbitrum Stylus
 
-This repository serves as a beginner-friendly starter kit for developing Arbitrum Stylus smart contracts in Rust, powered by the stylus-sdk. It features a Rust-based implementation of an ERC-721 NFT contract called "CandyNFT" (🍬), implementing mint, transfer, and approval functionality.
+## Introduction
 
-This template is configured to easily generate the necessary Solidity ABI for interacting with your Rust contract.
+Welcome to this comprehensive tutorial on building a complete NFT (ERC-721) smart contract ecosystem using Rust and Arbitrum Stylus. This project demonstrates professional smart contract development practices, from contract implementation to frontend integration.
+
+In this guide, we'll build a demo ERC-721 non-fungible token contract that supports standard NFT operations: minting, transferring, approving, and querying token ownership. We'll also create a complete web3 frontend to interact with the contract, providing a full-stack demonstration of modern dApp development.
+
+**What This Project Builds:**
+
+- **DemoNFT Smart Contract:** A standards-compliant ERC-721 implementation in Rust
+- **Web3 Frontend:** A responsive interface for minting and managing NFTs
+- **Local Development Setup:** Complete testing environment with Arbitrum Nitro devnode
+- **Production Best Practices:** Type safety, access control, and gas optimization
+
+**ERC-721 Standard Overview:**
+ERC-721 is the Ethereum standard for non-fungible tokens. Each token is unique and represents ownership of a distinct digital asset. Unlike ERC-20 (fungible) tokens that are interchangeable, ERC-721 tokens are perfect for:
+
+- Digital collectibles
+- Virtual real estate
+- Gaming assets
+- Identity verification
+- Any application requiring unique, provably scarce digital items
+
+This tutorial bridges the gap between blockchain backend development and frontend user experience, giving you the tools to build production-ready NFT applications.
+
+**Why Rust + Stylus for NFTs:**
+
+- **Type Safety:** Compile-time guarantees prevent common vulnerabilities
+- **Performance:** WebAssembly execution is up to 50% cheaper than Solidity
+- **Maintainability:** Strong ownership model and modular architecture
+- **Interoperability:** Seamless integration with existing Ethereum tooling
 
 ## Getting Started
 
@@ -122,7 +149,7 @@ This will output:
 // SPDX-License-Identifier: MIT-OR-APACHE-2.0
 pragma solidity ^0.8.23;
 
-interface ICandyNFT {
+interface IDemoNFT {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -141,7 +168,7 @@ See `examples/nft.rs` for a complete example using ethers-rs:
 
 ```rust
 abigen!(
-    CandyNFT,
+    DemoNFT,
     r#"[
         function name() external view returns (string memory)
         function symbol() external view returns (string memory)
@@ -159,7 +186,7 @@ abigen!(
 
 let provider = alchemy_provider(&rpc_url).await?;
 let client = LocalWallet::from_str(&priv_key, &provider.clone())?;
-let nft = CandyNFT::new(nft_address, &provider.into());
+let nft = DemoNFT::new(nft_address, &provider.into());
 
 // Read NFT metadata
 let name = nft.name().call().await?;
@@ -195,7 +222,7 @@ cast call \
 Example output:
 
 ```
-CandyNFT
+DemoNFT
 ```
 
 #### Sending a Transaction (Mint NFT)

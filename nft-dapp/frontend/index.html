@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NFT DApp - DemoNFT</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎨 DemoNFT</h1>
+        <button id="connectWallet" class="btn-primary">Connect Wallet</button>
+      </header>
+
+      <div class="main-content">
+        <section id="contractInfo" class="section">
+          <h2>Contract Info</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Name:</label>
+              <span id="contractName">-</span>
+            </div>
+            <div class="info-item">
+              <label>Symbol:</label>
+              <span id="contractSymbol">-</span>
+            </div>
+            <div class="info-item">
+              <label>Total Minted:</label>
+              <span id="totalMinted">-</span>
+            </div>
+            <div class="info-item">
+              <label>Your Balance:</label>
+              <span id="userBalance">-</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="mint" class="section">
+          <h2>Mint New NFT</h2>
+          <form id="mintForm">
+            <div class="form-group">
+              <label for="mintUri">Token URI (IPFS Link):</label>
+              <input
+                type="url"
+                id="mintUri"
+                required
+                placeholder="https://gateway.pinata.cloud/ipfs/..."
+              />
+            </div>
+            <button type="submit" class="btn-success" id="mintBtn">Mint NFT</button>
+          </form>
+        </section>
+
+        <section id="nfts" class="section">
+          <h2>Your NFTs</h2>
+          <div id="nftList" class="nft-grid">
+            <!-- NFTs will be displayed here -->
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

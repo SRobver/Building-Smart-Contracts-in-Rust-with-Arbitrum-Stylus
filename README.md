@@ -1,12 +1,21 @@
-# Build with Stylus: Rust Edition
+# Building Smart Contracts in Rust with Arbitrum Stylus
 
-This guide walks you through creating a production-grade ERC-721 (NFT) smart contract, "CandyNFT" (🍬), using Rust on Arbitrum's Stylus platform. Stylus leverages WebAssembly (WASM) for high-performance, EVM-compatible smart contracts, combining Rust's type safety with Arbitrum's scalability. We'll scaffold a modular project, implement a reusable ERC-721 engine, validate it, and deploy to a local Arbitrum devnet.
+## Introduction
+
+This repository provides a comprehensive guide to building secure, efficient smart contracts on the Ethereum Virtual Machine (EVM) using Rust and Arbitrum Stylus. Stylus is Arbitrum's innovative layer-2 scaling solution that enables developers to write smart contracts in languages beyond Solidity, leveraging WebAssembly (WASM) for enhanced performance and safety.
+
+In this tutorial, we'll build a demo ERC-721 (NFT) token contract - a non-fungible token standard that allows for unique digital assets on the blockchain. ERC-721 tokens are widely used for digital collectibles, gaming items, real estate deeds, and more. We're using Rust with Stylus because it provides compile-time safety guarantees, zero-cost abstractions, and significantly lower gas costs compared to traditional Solidity contracts (typically 20-50% cheaper). The tutorial demonstrates professional development practices with modular architecture, comprehensive testing, and deployment to a local Arbitrum devnet.
 
 **What You'll Achieve:**
 
-- A type-safe, reusable ERC-721 implementation with mint, transfer, and approval logic
-- Hands-on experience with Stylus SDK (`sol_storage!`, Alloy primitives)
-- A deployed NFT contract on a local chain, ready for testing or frontend integration
+- A production-ready ERC-721 NFT smart contract implementation in Rust
+- Type-safe development with strong memory and ownership guarantees
+- Gas-efficient WebAssembly contracts compiled from Rust code
+- Hands-on Stylus SDK usage with EVM compatibility
+- Local development environment setup and deployment
+- Comprehensive testing and interaction examples
+
+By the end of this guide, you'll have a fully functional NFT contract deployed to a local Arbitrum chain, with the knowledge to extend it for real-world applications.
 
 ---
 
@@ -79,19 +88,19 @@ Lists commands: new, check, deploy, estimate-gas, etc.
 
 ## 📦 Step 3: Scaffold a Stylus Project
 
-Create a new project to house our CandyNFT ERC-721 contract.
+Create a new project to house our DemoNFT ERC-721 contract.
 
 **Generate the project:**
 
 ```bash
-cargo stylus new candy-nft
-cd candy-nft
+cargo stylus new demo-nft
+cd demo-nft
 ```
 
 **Structure:**
 
 ```
-candy-nft/
+demo-nft/
 ├── Cargo.toml          # Dependencies and config
 ├── rust-toolchain.toml # Pins Rust version
 ├── src/
@@ -105,7 +114,7 @@ candy-nft/
 
 ```toml
 [package]
-name = "candy-nft"
+name = "demo-nft"
 version = "0.1.0"
 edition = "2021"
 
@@ -125,12 +134,15 @@ export-abi = ["stylus-sdk/export-abi"]
 
 ## 🧩 Step 4: Implement the ERC-721 NFT Contract
 
-We'll split the contract into two modules for modularity:
+We'll build a complete, production-ready ERC-721 NFT contract implementation in Rust. This section covers the step-by-step development process, from basic structure to advanced features. Our approach uses modular design with separation of concerns for maintainability and reusability.
 
-- `erc721.rs`: Generic ERC-721 logic (ownership, transfers, approvals)
-- `lib.rs`: CandyNFT-specific configuration and entrypoint
+The ERC-721 standard defines the interface for non-fungible tokens on Ethereum. Each token is unique and indivisible, perfect for representing digital collectibles, artwork, or any asset that requires uniqueness verification. We'll implement core methods like minting, transferring, and approving tokens, while leveraging Rust's type safety to prevent common blockchain vulnerabilities.
 
-Rust's type safety prevents bugs (e.g., unauthorized transfers), and Stylus SDK ensures EVM compatibility.
+**Architecture Overview:**
+
+- `erc721.rs`: Generic ERC-721 logic (ownership tracking, transfers, approvals) - reusable across different NFT contracts
+- `lib.rs`: DemoNFT-specific configuration and entrypoint - contract customization
+- Separation of business logic from contract specifics for better code organization
 
 ### 🔹 src/erc721.rs: Generic ERC-721 Engine
 
@@ -234,60 +246,68 @@ impl<T: Erc721Params> Erc721<T> {
 }
 ```
 
-### 🔹 src/lib.rs: CandyNFT Entrypoint
+### 🔸 src/lib.rs: DemoNFT Entrypoint
 
-**Imports:**
+**Implementation Steps:**
 
-````rust
+1. **Import required modules:** Bring in ERC-721 traits, error types, and Stylus primitives.
+2. **Define contract parameters:** Configure the NFT's name and symbol.
+3. **Create contract struct:** Use Stylus storage macros to define contract state.
+4. **Implement public methods:** Expose mint, transfer, and approval functionality.
+5. **Add security considerations:** Include ownership checks and access control in production.
+
+**Code:**
+
+```rust
 extern crate alloc;
 mod erc721;
 use alloy_primitives::{Address, U256};
 use stylus_sdk::prelude::*;
 use crate::erc721::{Erc721, Erc721Params, Erc721Error};
 
-**Token Metadata:**
-
-```rust
-struct CandyNFTParams;
-impl Erc721Params for CandyNFTParams {
-    const NAME: &'static str = "CandyNFT";
-    const SYMBOL: &'static str = "CNFT";
+// Contract configuration
+struct DemoNFTParams;
+impl Erc721Params for DemoNFTParams {
+    const NAME: &'static str = "DemoNFT";
+    const SYMBOL: &'static str = "DNFT";
 }
-````
 
-**Contract Entrypoint:**
-
-```rust
+// Entrypoint definition
 sol_storage! {
     #[entrypoint]
-    struct CandyNFT {
+    struct DemoNFT {
         #[borrow]
-        Erc721<CandyNFTParams> erc721;
+        Erc721<DemoNFTParams> erc721;
     }
 }
-```
 
-**Public Methods:**
-
-```rust
+// Public interface implementation
 #[public]
-#[inherit(Erc721<CandyNFTParams>)]
-impl CandyNFT {
+#[inherit(Erc721<DemoNFTParams>)]
+impl DemoNFT {
+    /// Mint a new NFT to specified address
     pub fn mint(&mut self, to: Address, token_id: U256) -> Result<(), Erc721Error> {
         self.erc721.mint(to, token_id)
     }
 
+    /// Transfer NFT ownership (requires approval if not owner)
     pub fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) -> Result<(), Erc721Error> {
         self.erc721.transfer_from(from, to, token_id)
     }
 
+    /// Approve another address to transfer this NFT
     pub fn approve(&mut self, spender: Address, token_id: U256) -> Result<(), Erc721Error> {
         self.erc721.approve(spender, token_id)
     }
 }
 ```
 
-**Security Note:** Add an owner field and only_owner checks for mint in production.
+**Security Considerations:**
+
+- Only contract owner should be able to mint tokens
+- Implement access control (e.g., Ownable pattern)
+- Add input validation for addresses and token IDs
+- Use safe transfer patterns in production deployments
 
 ## 🧪 Step 5: Build, Validate, and Deploy
 
@@ -353,17 +373,19 @@ cast send <address> "mint(address,uint256)" <your_address> 1 --private-key <key>
 Use `examples/nft.rs` to interact via ethers-rs:
 
 **Code:**
+
+```
 use ethers::prelude::\*;
 abigen!(
-CandyNFT,
+DemoNFT,
 r#"[
-function name() external view returns (string)
-function symbol() external view returns (string)
-function ownerOf(uint256 token_id) external view returns (address)
+function name() external view returns (string memory)
+function symbol() external view returns (string memory)
+function ownerOf(uint256 tokenId) external view returns (address)
 function balanceOf(address owner) external view returns (uint256)
-function mint(address to, uint256 token_id) external
-function transferFrom(address from, address to, uint256 token_id) external
-function approve(address spender, uint256 token_id) external
+function mint(address to, uint256 tokenId) external
+function transferFrom(address from, address to, uint256 tokenId) external
+function approve(address spender, uint256 tokenId) external
 ]"#
 );
 
@@ -371,11 +393,11 @@ function approve(address spender, uint256 token_id) external
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 let provider = Provider::<Http>::try_from(std::env::var("RPC_URL")?)?;
 let client = Arc::new(SignerMiddleware::new(
-provider,
+provider.clone(),
 Wallet::from_bytes(&hex::decode(std::fs::read_to_string(std::env::var("PRIV_KEY_PATH")?)?)?)?,
 ));
 let address = std::env::var("STYLUS_CONTRACT_ADDRESS")?.parse::<Address>()?;
-let nft = CandyNFT::new(address, client.clone());
+let nft = DemoNFT::new(address, client.clone());
 
     let name = nft.name().call().await?;
     println!("NFT name: {}", name);
@@ -391,14 +413,15 @@ let nft = CandyNFT::new(address, client.clone());
 
     Ok(())
 
-````
+```
 
 **Set up .env:**
+
 ```bash
 RPC_URL=http://localhost:8547
 STYLUS_CONTRACT_ADDRESS=<deployed_contract_address>
 PRIV_KEY_PATH=<path_to_private_key_file>
-````
+```
 
 **Run:**
 

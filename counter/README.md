@@ -1,27 +1,34 @@
-# README.md
+# Counter Contract with Arbitrum Stylus
 
-# Stylus Hello World Template
+## Introduction
 
-This repository serves as a beginner-friendly starter kit for developing Arbitrum Stylus smart contracts in Rust, powered by the stylus-sdk. It features a simple Rust-based implementation of a counter contract that mirrors this Solidity counterpart:
+This guide demonstrates building a simple yet complete smart contract using Rust and Arbitrum Stylus - a "Hello World" counter that showcases the fundamentals of WebAssembly-based smart contract development.
 
-```solidity
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+In this tutorial, we'll implement a basic counter contract that maintains a single unsigned integer state variable and provides methods to read, set, and increment its value. This mirrors the classic Solidity counter contract, but leverages Rust's type safety and WebAssembly performance benefits.
 
-contract Counter {
-    uint256 public number;
+**What This Contract Does:**
 
-    function setNumber(uint256 newNumber) public {
-        number = newNumber;
-    }
+- **Counter Storage:** Maintains a persistent `number` state variable
+- **Read Operations:** `number()` getter to retrieve current value
+- **Write Operations:** `setNumber(uint256)` to set a specific value, `increment()` to increase by 1
 
-    function increment() public {
-        number++;
-    }
-}
-```
+**Why This Example:**
+Counter contracts are the "Hello World" of smart contract development. They demonstrate:
 
-This template is configured to easily generate the necessary Solidity ABI for interacting with your Rust contract.
+- Basic state management in WebAssembly
+- Reading and writing contract storage
+- Public method exposure
+- Gas-efficient implementations
+
+**Learning Outcomes:**
+
+- Understanding Stylus project structure and configuration
+- Implementing contract storage using `sol_storage!` macros
+- Creating public methods with the `#[public]` attribute
+- Local development and testing workflows
+- ABI generation for external interaction
+
+By the end of this guide, you'll have a working counter contract deployed to a local Arbitrum chain, with the foundation to build more complex smart contracts.
 
 ## Getting Started
 
