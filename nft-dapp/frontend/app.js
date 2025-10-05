@@ -1,7 +1,6 @@
-// Load environment variables
-const CONTRACT_ADDRESS =
-  process.env.CONTRACT_ADDRESS || "0x3F8e82036B9627b98DD223F869F7C74F60D2A511"
-const RPC_URL = process.env.RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc"
+// Use CONFIG for all environment values
+const CONTRACT_ADDRESS = CONFIG.CONTRACT.ADDRESS
+const RPC_URL = CONFIG.CONTRACT.RPC_URL
 
 // Global variables
 let provider, signer, contract
@@ -165,6 +164,21 @@ const contractNameEl = document.getElementById("contractName")
 const contractSymbolEl = document.getElementById("contractSymbol")
 const totalMintedEl = document.getElementById("totalMinted")
 const userBalanceEl = document.getElementById("userBalance")
+const initForm = document.getElementById("initForm")
+const initStatusText = document.getElementById("initStatusText")
+const initNameInput = document.getElementById("initName")
+const initSymbolInput = document.getElementById("initSymbol")
+const initBaseUriInput = document.getElementById("initBaseUri")
+const initMaxSupplyInput = document.getElementById("initMaxSupply")
+const uploadForm = document.getElementById("uploadForm")
+const nftNameInput = document.getElementById("nftName")
+const nftDescriptionInput = document.getElementById("nftDescription")
+const nftImageInput = document.getElementById("nftImage")
+const uploadProgress = document.getElementById("uploadProgress")
+const progressBar = document.getElementById("progressBar")
+const progressText = document.getElementById("progressText")
+const uploadResult = document.getElementById("uploadResult")
+const metadataUri = document.getElementById("metadataUri")
 const mintForm = document.getElementById("mintForm")
 const mintUriInput = document.getElementById("mintUri")
 const nftList = document.getElementById("nftList")
@@ -180,12 +194,17 @@ let currentLoadingOperations = new Set()
 async function init() {
   if (typeof window.ethereum !== "undefined") {
     connectBtn.addEventListener("click", connectWallet)
+    initForm.addEventListener("submit", handleInit)
+    uploadForm.addEventListener("submit", handleIPFSUpload)
     mintForm.addEventListener("submit", handleMint)
     transferForm.addEventListener("submit", handleTransfer)
     transferForm.addEventListener("reset", closeModal)
   } else {
     showError("Please install MetaMask or another Ethereum wallet", "wallet")
   }
+
+  // Check initialization status on page load
+  checkInitStatus()
 }
 
 // Utility functions
@@ -232,13 +251,55 @@ function isImageURI(uri) {
   return imageExtensions.test(uri)
 }
 
+// Switch to Arbitrum Sepolia network
+async function switchToArbitrumSepolia() {
+  try {
+    const network = CONFIG.NETWORKS.ARBITRUM_SEPOLIA
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: `0x${network.chainId.toString(16)}` }],
+    })
+  } catch (switchError) {
+    // This error code indicates that the chain has not been added to MetaMask
+    if (switchError.code === 4902) {
+      try {
+        const network = CONFIG.NETWORKS.ARBITRUM_SEPOLIA
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: `0x${network.chainId.toString(16)}`,
+              chainName: network.chainName,
+              nativeCurrency: network.nativeCurrency,
+              rpcUrls: network.rpcUrls,
+              blockExplorerUrls: network.blockExplorerUrls,
+            },
+          ],
+        })
+      } catch (addError) {
+        console.error("Failed to add Arbitrum Sepolia network:", addError)
+        showError("Failed to add Arbitrum Sepolia network to MetaMask", "network")
+        throw addError
+      }
+    } else {
+      console.error("Failed to switch to Arbitrum Sepolia:", switchError)
+      showError("Please switch to Arbitrum Sepolia network in MetaMask", "network")
+      throw switchError
+    }
+  }
+}
+
 // Connect wallet
 async function connectWallet() {
   try {
     setLoading(connectBtn, true, "connect")
+
+    // First switch to Arbitrum Sepolia
+    await switchToArbitrumSepolia()
+
     await window.ethereum.request({ method: "eth_requestAccounts" })
     provider = new ethers.BrowserProvider(window.ethereum)
-    signer = provider.getSigner()
+    signer = await provider.getSigner()
 
     const address = await signer.getAddress()
     connectBtn.textContent = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`
@@ -256,9 +317,102 @@ async function connectWallet() {
   }
 }
 
+// Check if contract is initialized
+async function checkInitStatus() {
+  try {
+    // Create a read-only contract instance for checking status
+    const readOnlyProvider = new ethers.JsonRpcProvider(RPC_URL)
+    const readOnlyContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, readOnlyProvider)
+
+    // Try to get contract name - if this fails, contract is not initialized
+    await readOnlyContract.name()
+    initStatusText.textContent = "✅ Initialized"
+    initForm.style.display = "none"
+  } catch (error) {
+    console.error("Contract not initialized:", error)
+    initStatusText.textContent = "❌ Not Initialized"
+    initForm.style.display = "block"
+  }
+}
+
+// Handle initialization form submission
+async function handleInit(event) {
+  event.preventDefault()
+
+  const name = initNameInput.value.trim()
+  const symbol = initSymbolInput.value.trim()
+  const baseUri = initBaseUriInput.value.trim()
+  const maxSupply = parseInt(initMaxSupplyInput.value)
+
+  // Input validation
+  if (!name || !symbol || !baseUri) {
+    showError("Please fill in all required fields", "init")
+    return
+  }
+
+  if (maxSupply <= 0) {
+    showError("Max supply must be greater than 0", "init")
+    return
+  }
+
+  const initBtn = initForm.querySelector("button")
+
+  try {
+    setLoading(initForm, true, "init")
+    initBtn.disabled = true
+    initBtn.textContent = "Initializing..."
+
+    if (!contract) {
+      throw new Error("Please connect your wallet first")
+    }
+
+    const tx = await contract.init(name, symbol, baseUri, maxSupply)
+    console.log("Initialization transaction sent:", tx.hash)
+    await tx.wait()
+
+    showSuccess("Contract initialized successfully!")
+    initStatusText.textContent = "✅ Initialized"
+    initForm.style.display = "none"
+
+    // Refresh contract info
+    await loadContractInfo()
+  } catch (error) {
+    console.error("Initialization failed:", error)
+    let errorMessage = "Initialization failed"
+    if (error.message.includes("user rejected")) {
+      errorMessage = "Transaction was rejected by user"
+    } else if (error.message.includes("insufficient funds")) {
+      errorMessage = "Insufficient funds for transaction"
+    } else if (error.message.includes("already initialized")) {
+      errorMessage = "Contract is already initialized"
+    }
+    // Provide more specific error messages for common issues
+    if (error.code === "NETWORK_ERROR" || error.message.includes("Failed to fetch")) {
+      errorMessage = "Network connection failed. Check your internet connection and try again."
+    } else if (error.code === "ACTION_REJECTED") {
+      errorMessage = "Transaction was rejected by user"
+    } else if (error.code === "UNPREDICTABLE_GAS_LIMIT") {
+      errorMessage = "Transaction gas estimation failed"
+    } else if (error.code === "CALL_EXCEPTION") {
+      errorMessage = "Contract call failed - contract may not be deployed or address is incorrect"
+    } else if (error.message.includes("insufficient funds")) {
+      errorMessage = "Insufficient funds for transaction"
+    }
+
+    showError(`${errorMessage}: ${error.message}`, "init")
+  } finally {
+    setLoading(initForm, false, "init")
+    initBtn.disabled = false
+    initBtn.textContent = "Initialize Contract"
+  }
+}
+
 // Load contract information
 async function loadContractInfo() {
   try {
+    // First check if contract is initialized
+    await checkInitStatus()
+
     const [name, symbol, totalMinted, userAddress] = await Promise.all([
       contract.name(),
       contract.symbol(),
@@ -274,6 +428,7 @@ async function loadContractInfo() {
     userBalanceEl.textContent = balance.toString()
   } catch (error) {
     console.error("Error loading contract info:", error)
+    // If contract is not initialized, don't try to load other info
   }
 }
 
@@ -460,6 +615,157 @@ async function handleTransfer(event) {
     transferBtn.disabled = false
     transferBtn.textContent = "Transfer"
   }
+}
+
+// IPFS Upload Functions
+async function handleIPFSUpload(event) {
+  event.preventDefault()
+
+  const name = nftNameInput.value.trim()
+  const description = nftDescriptionInput.value.trim()
+  const file = nftImageInput.files[0]
+
+  // Input validation
+  if (!name || !description || !file) {
+    showError("Please fill in all fields and select an image", "upload")
+    return
+  }
+
+  // File validation
+  if (!CONFIG.UI.ALLOWED_FILE_TYPES.includes(file.type)) {
+    showError("Please select a valid image file (JPG, PNG, GIF, WebP)", "upload")
+    return
+  }
+
+  if (file.size > CONFIG.UI.MAX_FILE_SIZE) {
+    showError("File size must be less than 5MB", "upload")
+    return
+  }
+
+  const uploadBtn = uploadForm.querySelector("button")
+
+  try {
+    setLoading(uploadForm, true, "upload")
+    uploadBtn.disabled = true
+    uploadBtn.textContent = "Uploading..."
+
+    uploadProgress.style.display = "block"
+    progressText.textContent = "Uploading image to IPFS..."
+
+    // Upload image to Pinata
+    const imageHash = await uploadFileToIPFS(file)
+    const imageUrl = `${CONFIG.IPFS.GATEWAY_URL}${imageHash}`
+
+    progressBar.style.width = "50%"
+    progressText.textContent = "Creating metadata..."
+
+    // Create and upload metadata
+    const metadata = {
+      name: name,
+      description: description,
+      image: imageUrl,
+      attributes: [],
+    }
+
+    const metadataHash = await uploadJSONToIPFS(metadata)
+    const metadataUrl = `${CONFIG.IPFS.GATEWAY_URL}${metadataHash}`
+
+    progressBar.style.width = "100%"
+    progressText.textContent = "Upload complete!"
+
+    // Show result
+    metadataUri.textContent = metadataUrl
+    uploadResult.style.display = "block"
+
+    // Reset form
+    nftNameInput.value = ""
+    nftDescriptionInput.value = ""
+    nftImageInput.value = ""
+
+    showSuccess("NFT metadata uploaded successfully!")
+  } catch (error) {
+    console.error("Upload failed:", error)
+    showError(`Upload failed: ${error.message}`, "upload")
+  } finally {
+    setLoading(uploadForm, false, "upload")
+    uploadBtn.disabled = false
+    uploadBtn.textContent = "Upload to IPFS"
+    uploadProgress.style.display = "none"
+  }
+}
+
+async function uploadFileToIPFS(file) {
+  // For demo purposes, use Pinata's public API (no auth required for small files)
+  // In production, you would use proper API keys
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method: "POST",
+    headers: {
+      // Note: These are placeholder - user should set their own API keys
+      pinata_api_key: CONFIG.IPFS.PINATA_API_KEY || "",
+      pinata_secret_api_key: CONFIG.IPFS.PINATA_SECRET_KEY || "",
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to upload file to IPFS")
+  }
+
+  const result = await response.json()
+  return result.IpfsHash
+}
+
+async function uploadJSONToIPFS(metadata) {
+  const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      pinata_api_key: CONFIG.IPFS.PINATA_API_KEY || "",
+      pinata_secret_api_key: CONFIG.IPFS.PINATA_SECRET_KEY || "",
+    },
+    body: JSON.stringify(metadata),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to upload metadata to IPFS")
+  }
+
+  const result = await response.json()
+  return result.IpfsHash
+}
+
+// Utility functions for upload UI
+function copyToClipboard(text) {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      showSuccess("URI copied to clipboard!")
+    })
+    .catch(() => {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement("textarea")
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textArea)
+      showSuccess("URI copied to clipboard!")
+    })
+}
+
+async function mintFromUpload() {
+  const uri = metadataUri.textContent
+  if (!uri) {
+    showError("No metadata URI available", "mint")
+    return
+  }
+
+  // Fill the mint form with the URI and submit
+  mintUriInput.value = uri
+  handleMint({ preventDefault: () => {} })
 }
 
 // Initialize on load
